@@ -1,0 +1,2 @@
+# quickman
+extract kismet data
