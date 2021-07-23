@@ -1,9 +1,14 @@
-import requests
+import json
 import os
+import requests
 import yaml
-from jsonpath import JSONPath
-from dotenv import load_dotenv
 from collections import ChainMap
+from dotenv import load_dotenv
+from jsonpath import JSONPath
+
+def dump_kistmet_data():
+    with open('kismet_response.json', 'w') as f:
+      json.dump(kismet_data(), f, ensure_ascii=False, sort_keys = True, indent = 2)
 
 def config():
     with open('config.yml') as content:
@@ -12,26 +17,28 @@ def config():
 def wrap_segments(path):
     return map(lambda segment: "'{s}'".format(s=segment), path)
 
-def complete_path(path):
+def jsonpath(path):
     return '.'.join(["$"] + list(wrap_segments(path)))
 
-def entries_full_paths(entry):
+def full_paths(entry):
     base = entry['base']
     attrs = entry['fields']
+    complete_path = lambda attr_name: base + [attrs[attr_name]]
     return dict(map(
-        lambda attr: [attr, complete_path(base + [attrs[attr]])],
+        lambda attr: [attr, jsonpath(complete_path(attr))],
         attrs.keys()
     ))
 
-def all_complete_paths():
+def jsonpaths():
     c = config["kismet"]
-    return ChainMap(*map(lambda group: entries_full_paths(c[group]), c.keys()))
+    return dict(ChainMap(*map(lambda group: full_paths(c[group]), c.keys())))
 
 def extract_data(data):
+    attr_and_data = lambda query: "".join(JSONPath(query).parse(data))
     return dict(map(
-        lambda attr, query: [attr, "".join(JSONPath(query).parse(data))],
-        all_complete_paths().keys(),
-        all_complete_paths().values()
+        lambda attr, query: [attr, attr_and_data(query)],
+        jsonpaths().keys(),
+        jsonpaths().values()
     ))
 
 def url():
@@ -53,13 +60,11 @@ def network_data(kismet_response):
 
 def valid_data(network_data):
     """verify existence of all fields with non-empty value"""
-    return all(map(lambda attr: network_data[attr], all_complete_paths().keys()))
+    return all(map(lambda attr: network_data[attr], jsonpaths().keys()))
 
 config = config()
 def main():
     # use local .env to override ENVVARS
     load_dotenv()
-
-    kismet_response = kismet_data() or {'error': {'kismet': 'no data'}}
-
-    return kismet_response['error'] or network_data(kismet_response)
+    resp = kismet_data() or {'error': {'kismet': 'no data'}}
+    return list(network_data(resp)) if isinstance(resp, list) else resp['error']
