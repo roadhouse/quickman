@@ -22,11 +22,11 @@ def jsonpath(path):
 
 def full_paths(entry):
     base = entry['base']
-    attrs = entry['fields']
-    complete_path = lambda attr_name: base + [attrs[attr_name]]
+    paths = entry['fields']
+    complete_path = lambda attr_name: base + [paths[attr_name]]
     return dict(map(
         lambda attr: [attr, jsonpath(complete_path(attr))],
-        attrs.keys()
+        paths.keys()
     ))
 
 def jsonpaths():
@@ -34,12 +34,16 @@ def jsonpaths():
     return dict(ChainMap(*map(lambda group: full_paths(c[group]), c.keys())))
 
 def extract_data(data):
-    attr_and_data = lambda query: "".join(JSONPath(query).parse(data))
     return dict(map(
-        lambda attr, query: [attr, attr_and_data(query)],
+        lambda attr, query: [attr, parse_data(query, data)],
         jsonpaths().keys(),
         jsonpaths().values()
     ))
+
+def parse_data(query, json):
+    result = JSONPath(query).parse(json)
+    return "" if not result else result.pop()
+
 
 def url():
     return "http://{user}:{password}@127.0.0.1:2501/devices/views/all/devices.json".format(

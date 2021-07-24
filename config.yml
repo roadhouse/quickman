@@ -11,3 +11,8 @@ kismet:
       - dot11.device
     fields:
       bssid: dot11.device.last_bssid
+  group3:
+    base:
+      - kismet.device.base.signal
+    fields:
+      signal: kismet.common.signal.last_signal
