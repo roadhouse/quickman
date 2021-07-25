@@ -41,14 +41,14 @@ def realpaths(entry):
     base = entry['base']
     paths = entry['fields']
     path = lambda attr_name: base + [paths[attr_name]]
-    return dict(map(lambda attr: [attr, jsonpath(path(attr))], paths.keys()))
+    return dict(map(lambda attr: (attr, jsonpath(path(attr))), paths.keys()))
 
 
 def jsonpaths():
     """ all generate jsonpaths contained in config file """
     cfg = config["kismet"]
-    return dict(
-        ChainMap(*map(lambda group: realpaths(cfg[group]), cfg.keys())))
+    paths_from_attrs = lambda group: realpaths(cfg[group])
+    return dict(ChainMap(*map(paths_from_attrs, cfg.keys())))
 
 
 def extract_data(data_node):
@@ -100,4 +100,4 @@ def main():
     # use local .env to override ENVVARS
     load_dotenv()
     resp = kismet_response()
-    return resp['error'] or list(data(resp))
+    return resp['error'] if 'error' in resp else list(data(resp['ok']))
