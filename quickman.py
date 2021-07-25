@@ -10,10 +10,10 @@ from dotenv import load_dotenv
 from jsonpath import JSONPath
 
 
-def dump_kistmet_data():
+def dump_kismet_data():
     """ dump kismet data in formated file """
     with open('kismet_response.json', 'w') as file:
-        json.dump(kismet_data(),
+        json.dump(kismet_response(),
                   file,
                   ensure_ascii=False,
                   sort_keys=True,
