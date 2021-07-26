@@ -20,7 +20,7 @@ def dump_kismet_data():
                   indent=2)
 
 
-def config():
+def config_file_content():
     """ config in json """
     with open('config.yml') as content:
         return yaml.safe_load(content)
@@ -51,20 +51,6 @@ def jsonpaths():
     return dict(ChainMap(*map(paths_from_attrs, cfg.keys())))
 
 
-def extract_data(data_node):
-    """ parse data from each node in data """
-    return dict(
-        map(lambda attr, query: [attr, parse_data(query, data_node)],
-            jsonpaths().keys(),
-            jsonpaths().values()))
-
-
-def parse_data(query, kismet_json):
-    """ return jsonpath return value """
-    result = JSONPath(query).parse(kismet_json)
-    return "" if not result else result.pop()
-
-
 def url():
     """ generate kismet url using ENVVARS to fetch credentials """
     return "http://{user}:{password}@127.0.0.1:2501/devices/views/all/devices.json".format(
@@ -84,7 +70,13 @@ def kismet_response():
 
 def data(response):
     """ the networj data with all attributes filleds """
-    return filter(valid_data, map(extract_data, response))
+    queries = {attr: JSONPath(query) for attr, query in jsonpaths().items()}
+    sanitize = lambda value: value.pop() if value else ""
+    extract_network_data = lambda node: {
+        attribute: sanitize(jsonpath.parse(node))
+        for attribute, jsonpath in queries.items()
+    }
+    return filter(valid_data, map(extract_network_data, response))
 
 
 def valid_data(network_data):
@@ -92,7 +84,7 @@ def valid_data(network_data):
     return all(map(lambda attr: network_data[attr], jsonpaths().keys()))
 
 
-config = config()
+config = config_file_content()
 
 
 def main():
