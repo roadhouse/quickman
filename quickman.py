@@ -11,7 +11,6 @@ from jsonpath import JSONPath
 
 
 def dump_kismet_data():
-    """ dump kismet data in formated file """
     with open('kismet_response.json', 'w') as file:
         json.dump(kismet_response(),
                   file,
@@ -40,21 +39,34 @@ def realpaths(entry):
     """ concatenate the base segment with the attr segment """
     base = entry['base']
     paths = entry['fields']
-    path = lambda attr_name: base + [paths[attr_name]]
-    return dict(map(lambda attr: (attr, jsonpath(path(attr))), paths.keys()))
+
+    def path(attr_name):
+        return base + [paths[attr_name]]
+
+    def jpaths(attr):
+        return (attr, jsonpath(path(attr)))
+
+    return dict(map(jpaths, paths.keys()))
 
 
 def jsonpaths():
     """ all generate jsonpaths contained in config file """
     cfg = config["kismet"]
-    paths_from_attrs = lambda group: realpaths(cfg[group])
-    return dict(ChainMap(*map(paths_from_attrs, cfg.keys())))
+    groups = cfg.keys()
+
+    def paths_from_group(group):
+        return realpaths(cfg[group])
+
+    return dict(ChainMap(*map(paths_from_group, groups)))
 
 
 def url():
     """ generate kismet url using ENVVARS to fetch credentials """
-    return "http://{user}:{password}@127.0.0.1:2501/devices/views/all/devices.json".format(
-        user=os.environ["KISMET_USER"], password=os.environ["KISMET_PASSWORD"])
+    u = os.environ["KISMET_USER"]
+    p = os.environ["KISMET_PASSWORD"]
+    host = "{user}:{password}@127.0.0.1:2501".format(user=u, password=p)
+
+    return "http://{host}/devices/views/all/devices.json".format(host=host)
 
 
 def kismet_response():
@@ -68,14 +80,19 @@ def kismet_response():
     return response
 
 
-def data(response):
+def network_data(response):
     """ the networj data with all attributes filleds """
     queries = {attr: JSONPath(query) for attr, query in jsonpaths().items()}
-    sanitize = lambda value: value.pop() if value else ""
-    extract_network_data = lambda node: {
-        attribute: sanitize(jsonpath.parse(node))
-        for attribute, jsonpath in queries.items()
-    }
+
+    def sanitize(attr_value):
+        return attr_value.pop() if attr_value else ""
+
+    def extract_network_data(kismet_item):
+        return {
+            attribute: sanitize(jsonpath.parse(kismet_item))
+            for attribute, jsonpath in queries.items()
+        }
+
     return filter(valid_data, map(extract_network_data, response))
 
 
@@ -92,4 +109,4 @@ def main():
     # use local .env to override ENVVARS
     load_dotenv()
     resp = kismet_response()
-    return resp['error'] if 'error' in resp else list(data(resp['ok']))
+    return resp['error'] if 'error' in resp else list(network_data(resp['ok']))
