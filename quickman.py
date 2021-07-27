@@ -64,7 +64,8 @@ def url():
     """ generate kismet url using ENVVARS to fetch credentials """
     u = os.environ["KISMET_USER"]
     p = os.environ["KISMET_PASSWORD"]
-    host = "{user}:{password}@127.0.0.1:2501".format(user=u, password=p)
+    i = os.environ["KISMET_IP"]
+    host = "{user}:{password}@{ip}:2501".format(user=u, password=p, ip=i)
 
     return "http://{host}/devices/views/all/devices.json".format(host=host)
 
@@ -75,8 +76,8 @@ def kismet_response():
     try:
         response = requests.get(url()).json()
         response = {'ok': response} if response else {'error': 'no_data'}
-    except requests.exceptions.RequestException as exception:
-        response = {'error': {'kismet': 'offline', 'response': exception}}
+    except requests.exceptions.RequestException:
+        response = {'error': {'kismet': 'offline'}}
     return response
 
 
@@ -101,12 +102,14 @@ def valid_data(network_data):
     return all(map(lambda attr: network_data[attr], jsonpaths().keys()))
 
 
-config = config_file_content()
-
-
 def main():
     """ main function """
     # use local .env to override ENVVARS
     load_dotenv()
     resp = kismet_response()
     return resp['error'] if 'error' in resp else list(network_data(resp['ok']))
+
+
+if __name__ == "__main__":
+    config = config_file_content()
+    print(main())
