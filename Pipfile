@@ -9,6 +9,7 @@ quickman = {editable = true, path = "."}
 requests = "*"
 pyyaml = "*"
 jsonpath-python = "*"
+pytest = "*"
 
 [dev-packages]
 
