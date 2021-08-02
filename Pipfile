@@ -5,13 +5,17 @@ name = "pypi"
 
 [packages]
 python-dotenv = "*"
-quickman = {editable = true, path = "."}
 requests = "*"
 pyyaml = "*"
 jsonpath-python = "*"
 pytest = "*"
+pexpect = "*"
 
 [dev-packages]
 
 [requires]
 python_version = "3.8"
+
+[packages.quickman]
+editable = true
+path = "."

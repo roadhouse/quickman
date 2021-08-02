@@ -5,21 +5,30 @@ import os
 import requests
 from dotenv import load_dotenv
 from jsonpath import JSONPath
+import json
 
 
 class Kismet:
     def __init__(self, config):
         self.config = config
 
+
+def dump_kismet_data(self):
+    with open('kismet_response.json', 'w') as file:
+        json.dump(self.kismet_response(),
+                  file,
+                  ensure_ascii=False,
+                  sort_keys=True,
+                  indent=2)
+
     def url(self):
         """ generate kismet url using ENVVARS to fetch credentials """
         load_dotenv()
-
-        u = os.environ["KISMET_USER"]
-        p = os.environ["KISMET_PASSWORD"]
-        i = os.environ["KISMET_IP"]
-        host = "{user}:{password}@{ip}:2501".format(user=u, password=p, ip=i)
-
+        kismet_info = [
+            os.environ["KISMET_USER"], os.environ["KISMET_PASSWORD"],
+            os.environ["KISMET_IP"]
+        ]
+        host = "{user}:{password}@{ip}:2501".format(*kismet_info)
         return "http://{0}/devices/views/all/devices.json".format(host)
 
     def kismet_response(self):
